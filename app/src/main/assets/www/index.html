@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>خطوة — MicroStep</title>
+<meta name="description" content="خطوة: التقط أفكارك في ثوانٍ، وحوّل أي مهمة كبيرة إلى أصغر خطوة ممكنة.">
+<meta name="theme-color" content="#1F7A5C">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+  /* ============ Design tokens ============ */
+  :root{
+    --bg:#F5F3EE;
+    --bg-elevated:#FFFFFF;
+    --surface-2:#EEEBE2;
+    --ink:#1C1D1B;
+    --ink-soft:#5B5C54;
+    --ink-faint:#9A9B90;
+    --border:#E1DED2;
+    --jade:#1F7A5C;
+    --jade-strong:#175E47;
+    --jade-tint:#E4F1EA;
+    --coral:#DC4A34;
+    --coral-tint:#FBEAE6;
+    --gold:#B9852E;
+    --gold-tint:#F3E7D2;
+    --shadow:0 10px 28px rgba(28,29,27,0.08);
+    --radius-lg:20px;
+    --radius-md:14px;
+    --radius-sm:10px;
+    color-scheme: light;
+  }
+  html[data-theme="dark"]{
+    --bg:#14161A;
+    --bg-elevated:#1C1F24;
+    --surface-2:#20242A;
+    --ink:#EEEEE8;
+    --ink-soft:#A7A89E;
+    --ink-faint:#6D6F68;
+    --border:#2A2E34;
+    --jade:#3FBF8F;
+    --jade-strong:#57D6A5;
+    --jade-tint:rgba(63,191,143,0.14);
+    --coral:#FF7A63;
+    --coral-tint:rgba(255,122,99,0.14);
+    --gold:#E3B565;
+    --gold-tint:rgba(227,181,101,0.14);
+    --shadow:0 12px 32px rgba(0,0,0,0.45);
+    color-scheme: dark;
+  }
+
+  *{ box-sizing:border-box; }
+  html,body{ height:100%; }
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:'IBM Plex Sans Arabic', sans-serif;
+    font-weight:400;
+    transition: background-color .35s ease, color .35s ease;
+    -webkit-font-smoothing:antialiased;
+  }
+  h1,h2,h3{ font-family:'Reem Kufi', sans-serif; margin:0; font-weight:700; }
+  button{ font-family:inherit; }
+  input{ font-family:inherit; }
+  *:focus-visible{ outline:2px solid var(--jade); outline-offset:2px; border-radius:6px; }
+  .sr-only{ position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; }
+
+  .app{ max-width:560px; margin:0 auto; padding:22px 18px 60px; min-height:100%; }
+
+  /* ============ Topbar ============ */
+  .topbar{ display:flex; align-items:center; justify-content:space-between; margin-bottom:26px; }
+  .brand{ display:flex; align-items:center; gap:10px; }
+  .brand-mark{ width:34px; height:34px; color:var(--jade); flex-shrink:0; }
+  .brand-text h1{ font-size:22px; line-height:1; color:var(--ink); }
+  .brand-text p{ margin:4px 0 0; font-size:12px; color:var(--ink-faint); }
+  .topbar-actions{ display:flex; align-items:center; gap:10px; }
+
+  .streak{
+    display:flex; align-items:center; gap:6px;
+    background:var(--gold-tint); color:var(--gold);
+    border-radius:999px; padding:6px 12px; font-size:13px; font-weight:600;
+  }
+  .streak svg{ width:15px; height:15px; }
+  .streak.bump{ animation: bump .4s ease; }
+  @keyframes bump{ 0%{transform:scale(1)} 40%{transform:scale(1.18)} 100%{transform:scale(1)} }
+
+  .theme-toggle{
+    width:38px; height:38px; border-radius:50%;
+    border:1px solid var(--border); background:var(--bg-elevated);
+    display:flex; align-items:center; justify-content:center; cursor:pointer;
+    color:var(--ink-soft); transition: background-color .2s ease, transform .15s ease;
+  }
+  .theme-toggle:hover{ transform:translateY(-1px); }
+  .theme-toggle svg{ width:18px; height:18px; }
+
+  /* ============ Capture zone ============ */
+  .capture-zone{
+    position:relative; background:var(--bg-elevated); border:1px solid var(--border);
+    border-radius:var(--radius-lg); box-shadow:var(--shadow); padding:26px 20px;
+    margin-bottom:30px; overflow:hidden; transition: background-color .35s ease, border-color .35s ease;
+  }
+  .panel{ display:flex; flex-direction:column; align-items:center; text-align:center; gap:16px; }
+  .panel[hidden]{ display:none; }
+
+  /* --- idle / quick capture --- */
+  .capture-idle{ width:100%; display:flex; flex-direction:column; align-items:center; gap:18px; }
+  .capture-idle input{
+    width:100%; border:1.5px solid var(--border); background:var(--surface-2);
+    color:var(--ink); border-radius:var(--radius-md); padding:14px 16px; font-size:16px;
+    transition: border-color .2s ease;
+  }
+  .capture-idle input:focus{ border-color:var(--jade); outline:none; }
+  .capture-idle input::placeholder{ color:var(--ink-faint); }
+
+  .capture-btn-wrap{ position:relative; width:76px; height:76px; }
+  .capture-ring{
+    position:absolute; inset:0; border-radius:50%;
+    border:1.5px solid var(--jade); opacity:.45;
+    animation: breathe 2.6s ease-in-out infinite;
+  }
+  @keyframes breathe{
+    0%{ transform:scale(1); opacity:.45; }
+    50%{ transform:scale(1.22); opacity:0; }
+    100%{ transform:scale(1); opacity:0; }
+  }
+  .capture-btn{
+    position:relative; width:76px; height:76px; border-radius:50%; border:none;
+    background:var(--jade); color:#fff; cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+    box-shadow:0 8px 20px rgba(31,122,92,.35);
+    transition: transform .15s ease, background-color .2s ease;
+  }
+  .capture-btn:hover{ background:var(--jade-strong); transform:translateY(-2px); }
+  .capture-btn:active{ transform:translateY(0) scale(.96); }
+  .capture-btn svg{ width:26px; height:26px; }
+  .capture-hint{ font-size:12.5px; color:var(--ink-faint); margin:0; }
+
+  /* --- decision --- */
+  .decision-quote{
+    font-size:15px; color:var(--ink-soft); margin:0; max-width:90%;
+  }
+  .decision-quote span{ color:var(--ink); font-weight:600; }
+  .decision-question{ font-family:'Reem Kufi', sans-serif; font-size:19px; margin:0; }
+  .decision-choices{ display:flex; gap:12px; width:100%; }
+  .choice{
+    flex:1; display:flex; flex-direction:column; align-items:center; gap:6px;
+    padding:18px 10px; border-radius:var(--radius-md); cursor:pointer;
+    border:1.5px solid var(--border); background:var(--surface-2); color:var(--ink);
+    transition: border-color .18s ease, transform .15s ease, background-color .18s ease;
+  }
+  .choice:hover{ transform:translateY(-2px); }
+  .choice svg{ width:24px; height:24px; }
+  .choice-yes svg{ color:var(--jade); }
+  .choice-no svg{ color:var(--gold); }
+  .choice-yes:hover{ border-color:var(--jade); background:var(--jade-tint); }
+  .choice-no:hover{ border-color:var(--gold); background:var(--gold-tint); }
+  .choice-label{ font-size:14.5px; font-weight:600; }
+  .choice-sub{ font-size:12px; color:var(--ink-faint); }
+  .ghost-btn{
+    border:none; background:transparent; color:var(--ink-faint); font-size:13px;
+    cursor:pointer; text-decoration:underline; padding:2px;
+  }
+  .ghost-btn:hover{ color:var(--ink-soft); }
+
+  /* --- timer panel --- */
+  .timer-ring-wrap{ position:relative; width:190px; height:190px; }
+  .timer-ring{ width:100%; height:100%; transform:rotate(-90deg); }
+  .ring-track{ fill:none; stroke:var(--surface-2); stroke-width:10; }
+  .ring-progress{
+    fill:none; stroke:var(--jade); stroke-width:10; stroke-linecap:round;
+    stroke-dasharray:565.48; transition: stroke-dashoffset 1s linear, stroke .3s ease;
+  }
+  .timer-ring-wrap.urgent .ring-progress{ stroke:var(--coral); }
+  .timer-center{
+    position:absolute; inset:0; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; gap:4px; text-align:center; padding:0 20px;
+  }
+  .timer-time{ font-family:'Reem Kufi', sans-serif; font-size:38px; letter-spacing:1px; }
+  .timer-task{ font-size:12.5px; color:var(--ink-faint); max-width:140px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .timer-msg{ font-size:14px; color:var(--jade); font-weight:600; min-height:20px; }
+  .timer-actions{ display:flex; gap:10px; flex-wrap:wrap; justify-content:center; }
+
+  .btn{
+    border:none; border-radius:999px; padding:11px 20px; font-size:14px; font-weight:600;
+    cursor:pointer; transition: transform .15s ease, background-color .18s ease, opacity .15s ease;
+  }
+  .btn:hover{ transform:translateY(-1px); }
+  .btn:active{ transform:translateY(0); }
+  .btn-jade{ background:var(--jade); color:#fff; }
+  .btn-jade:hover{ background:var(--jade-strong); }
+  .btn-outline{ background:transparent; color:var(--jade); border:1.5px solid var(--jade); }
+  .btn-outline:hover{ background:var(--jade-tint); }
+  .btn-ghost{ background:transparent; color:var(--ink-faint); }
+  .btn-ghost:hover{ color:var(--ink-soft); }
+  .btn-sm{ padding:8px 14px; font-size:13px; }
+  .btn[disabled]{ opacity:.5; cursor:default; transform:none; }
+
+  /* --- microstep panel --- */
+  .microstep-title{ font-family:'Reem Kufi', sans-serif; font-size:18px; margin:0; }
+  .microstep-quote{ font-size:13.5px; color:var(--ink-faint); margin:-8px 0 0; }
+  .input-row{ display:flex; gap:8px; width:100%; }
+  .input-row input{
+    flex:1; border:1.5px solid var(--border); background:var(--surface-2); color:var(--ink);
+    border-radius:var(--radius-sm); padding:11px 14px; font-size:14.5px; transition:border-color .2s ease;
+  }
+  .input-row input:focus{ border-color:var(--jade); outline:none; }
+
+  /* ============ Task list ============ */
+  .task-list{ display:flex; flex-direction:column; gap:14px; }
+  .list-label{ font-size:12.5px; color:var(--ink-faint); font-weight:600; margin:0 4px 2px; }
+
+  .empty-state{
+    text-align:center; padding:36px 20px; color:var(--ink-faint);
+    border:1.5px dashed var(--border); border-radius:var(--radius-lg); font-size:14px; line-height:1.8;
+  }
+
+  .task-card{
+    background:var(--bg-elevated); border:1px solid var(--border); border-radius:var(--radius-lg);
+    padding:18px 18px 16px; box-shadow:var(--shadow); transition: background-color .35s ease, border-color .35s ease;
+  }
+  .task-card.enter{ animation: card-in .32s ease; }
+  @keyframes card-in{ from{ opacity:0; transform:translateY(10px); } to{ opacity:1; transform:translateY(0); } }
+
+  .task-title{ font-size:16px; font-weight:700; margin:0 0 12px; font-family:'IBM Plex Sans Arabic'; }
+  .task-title.quick{ display:flex; align-items:center; gap:8px; }
+  .quick-badge{
+    font-size:10.5px; font-weight:700; background:var(--jade-tint); color:var(--jade);
+    border-radius:999px; padding:3px 9px;
+  }
+
+  .trail{ display:flex; flex-direction:column; }
+  .trail-step{ position:relative; display:flex; align-items:flex-start; gap:12px; padding:5px 0 5px; }
+  .trail-step:not(:last-child)::after{
+    content:""; position:absolute; inset-inline-start:9px; top:26px; bottom:-9px;
+    width:2px; background-image: linear-gradient(var(--border) 60%, transparent 0%);
+    background-size: 2px 8px; background-repeat: repeat-y;
+  }
+  .trail-dot{
+    flex-shrink:0; width:20px; height:20px; border-radius:50%; margin-top:1px;
+    display:flex; align-items:center; justify-content:center; cursor:default;
+    transition: background-color .2s ease, border-color .2s ease, transform .2s ease;
+  }
+  .trail-dot svg{ width:11px; height:11px; color:#fff; opacity:0; transition:opacity .15s ease; }
+
+  .trail-step.done .trail-dot{ background:var(--jade); border:2px solid var(--jade); }
+  .trail-step.done .trail-dot svg{ opacity:1; }
+  .trail-step.done .trail-step-text{ color:var(--ink-faint); text-decoration:line-through; text-decoration-color:var(--border); }
+
+  .trail-step.active .trail-dot{
+    background:var(--bg-elevated); border:2px solid var(--jade); cursor:pointer;
+  }
+  .trail-step.active .trail-dot:hover{ transform:scale(1.12); background:var(--jade-tint); }
+  .trail-step.active .trail-step-text{ color:var(--ink); font-weight:600; }
+
+  .trail-dot.just-done{ animation: dot-pop .38s ease; }
+  @keyframes dot-pop{ 0%{transform:scale(1)} 45%{transform:scale(1.35)} 100%{transform:scale(1)} }
+
+  .trail-step-text{ font-size:14.5px; line-height:1.55; padding-top:1px; }
+
+  .task-followup{ margin-top:10px; padding-top:12px; border-top:1px dashed var(--border); display:flex; flex-direction:column; gap:10px; }
+  .task-followup p{ margin:0; font-size:13.5px; color:var(--ink-soft); }
+  .followup-actions{ display:flex; gap:8px; flex-wrap:wrap; }
+
+  .resume-row{ margin-top:10px; padding-top:12px; border-top:1px dashed var(--border); display:flex; align-items:center; gap:10px; }
+  .resume-note{ font-size:12.5px; color:var(--ink-faint); flex:1; }
+
+  footer.note{ text-align:center; font-size:11.5px; color:var(--ink-faint); margin-top:30px; line-height:1.8; }
+
+  @media (max-width:380px){
+    .decision-choices{ flex-direction:column; }
+    .timer-ring-wrap{ width:170px; height:170px; }
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    *{ animation-duration:0.001ms !important; animation-iteration-count:1 !important; transition-duration:0.001ms !important; }
+    .capture-ring{ display:none; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header class="topbar">
+    <div class="brand">
+      <svg class="brand-mark" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <ellipse cx="16" cy="24" rx="7.2" ry="10.5" fill="currentColor" opacity="0.9"/>
+        <circle cx="26" cy="10" r="2.6" fill="currentColor"/>
+        <circle cx="31.5" cy="15.5" r="2.2" fill="currentColor"/>
+        <circle cx="34.5" cy="21.5" r="1.9" fill="currentColor"/>
+      </svg>
+      <div class="brand-text">
+        <h1>خطوة</h1>
+        <p>خطوة وحدة كل مرة</p>
+      </div>
+    </div>
+    <div class="topbar-actions">
+      <div class="streak" id="streak" aria-live="polite">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v6M12 2s5 3 5 8a5 5 0 0 1-10 0c0-2 1-3.5 2-4.5"/></svg>
+        <span id="streakCount">0</span> خطوات اليوم
+      </div>
+      <button class="theme-toggle" id="themeToggle" aria-label="تبديل الوضع الليلي والنهاري">
+        <svg id="themeIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4.5"/><path d="M12 2.5v2M12 19.5v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M2.5 12h2M19.5 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <section class="capture-zone" id="captureZone" aria-live="polite">
+
+    <!-- idle: quick capture -->
+    <div class="panel" id="panel-idle">
+      <div class="capture-idle">
+        <label class="sr-only" for="captureInput">بماذا تفكر؟</label>
+        <input id="captureInput" type="text" placeholder="بماذا تفكر؟ اكتبها هنا..." maxlength="120">
+        <div class="capture-btn-wrap">
+          <span class="capture-ring" aria-hidden="true"></span>
+          <button class="capture-btn" id="captureBtn" aria-label="التقط الفكرة">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+          </button>
+        </div>
+        <p class="capture-hint">أقل من ٣ ثوانٍ — بدون تاريخ ولا تصنيف</p>
+      </div>
+    </div>
+
+    <!-- decision -->
+    <div class="panel" id="panel-decision" hidden>
+      <p class="decision-quote">التقطت: <span id="decisionTaskText"></span></p>
+      <p class="decision-question">هل تحتاج أقل من دقيقتين؟</p>
+      <div class="decision-choices">
+        <button class="choice choice-yes" id="choiceYes">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l3 2M9 2h6"/></svg>
+          <span class="choice-label">نعم، أقل من دقيقتين</span>
+          <span class="choice-sub">افتحها الحين وخلّص منها</span>
+        </button>
+        <button class="choice choice-no" id="choiceNo">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="6" cy="7" r="2.3"/><circle cx="18" cy="17" r="2.3"/><path d="M6 9.3v3a2 2 0 0 0 2 2h2M14 14.3h2a2 2 0 0 0 2-2v-1" stroke-dasharray="3 3"/></svg>
+          <span class="choice-label">لا، تحتاج وقت أطول</span>
+          <span class="choice-sub">قسّمها لخطوة صغيرة</span>
+        </button>
+      </div>
+      <button class="ghost-btn" id="decisionCancel">إلغاء</button>
+    </div>
+
+    <!-- timer -->
+    <div class="panel" id="panel-timer" hidden>
+      <div class="timer-ring-wrap" id="timerRingWrap">
+        <svg class="timer-ring" viewBox="0 0 200 200">
+          <circle class="ring-track" cx="100" cy="100" r="90"/>
+          <circle class="ring-progress" id="ringProgress" cx="100" cy="100" r="90"/>
+        </svg>
+        <div class="timer-center">
+          <span class="timer-time" id="timerTime">٠٢:٠٠</span>
+          <span class="timer-task" id="timerTaskLabel"></span>
+        </div>
+      </div>
+      <p class="timer-msg" id="timerMsg"></p>
+      <div class="timer-actions" id="timerActions">
+        <button class="btn btn-outline" id="timerDone">أنجزتها ✓</button>
+        <button class="btn btn-ghost" id="timerCancel">تراجع</button>
+      </div>
+    </div>
+
+    <!-- microstep -->
+    <div class="panel" id="panel-microstep" hidden>
+      <h2 class="microstep-title">وش أصغر خطوة تقدر تبدأ فيها الآن؟</h2>
+      <p class="microstep-quote">للمهمة: <span id="microstepTaskLabel"></span></p>
+      <div class="input-row">
+        <label class="sr-only" for="microstepInput">أصغر خطوة</label>
+        <input id="microstepInput" type="text" placeholder="مثال: افتح صفحة ١٠" maxlength="90">
+        <button class="btn btn-jade" id="microstepSubmit">ابدأ السلسلة</button>
+      </div>
+      <button class="ghost-btn" id="microstepCancel">إلغاء</button>
+    </div>
+
+  </section>
+
+  <p class="list-label">مهامك</p>
+  <section class="task-list" id="taskList"></section>
+
+  <footer class="note">نسخة تجريبية — المهام محفوظة في هذه الجلسة فقط، ولا تبقى بعد إغلاق الصفحة.</footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  // ---------- theme ----------
+  var root = document.documentElement;
+  var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+  root.setAttribute('data-theme', prefersDark ? 'dark' : 'light');
+  updateThemeIcon();
+
+  document.getElementById('themeToggle').addEventListener('click', function(){
+    var current = root.getAttribute('data-theme');
+    var next = current === 'dark' ? 'light' : 'dark';
+    root.setAttribute('data-theme', next);
+    updateThemeIcon();
+    saveTheme(next);
+  });
+
+  function updateThemeIcon(){
+    var isDark = root.getAttribute('data-theme') === 'dark';
+    var icon = document.getElementById('themeIcon');
+    icon.innerHTML = isDark
+      ? '<path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 0 0 10.5 10.5z" fill="currentColor" stroke="none"/>'
+      : '<circle cx="12" cy="12" r="4.5"/><path d="M12 2.5v2M12 19.5v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M2.5 12h2M19.5 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"/>';
+  }
+
+  // ---------- state ----------
+  var tasks = [];          // {id, title, steps:[{text, done}], paused, quick}
+  var pendingText = '';
+  var streakCount = 0;
+  var newIds = {};         // ids to animate-in on next render
+  var justDoneKey = null;  // "taskId-stepIndex" to pop-animate
+  var timerInterval = null;
+  var timerRemaining = 120;
+  var TOTAL = 120;
+  var CIRC = 2 * Math.PI * 90;
+
+  var arabicDigits = ['٠','١','٢','٣','٤','٥','٦','٧','٨','٩'];
+  function toArabicNum(n){
+    return String(n).split('').map(function(d){ return /\d/.test(d) ? arabicDigits[+d] : d; }).join('');
+  }
+  function genId(){ return 't' + Date.now() + Math.floor(Math.random()*1000); }
+
+  // ---------- persistence (this is the actual fix for "forgetting") ----------
+  var storageAvailable = (function(){
+    try {
+      var k = '__khatwa_test__';
+      localStorage.setItem(k, '1');
+      localStorage.removeItem(k);
+      return true;
+    } catch(e){ return false; }
+  })();
+
+  async function saveTasks(){
+    if (!storageAvailable) return;
+    try { localStorage.setItem('khatwa:tasks', JSON.stringify(tasks)); }
+    catch(e){ console.error('تعذّر حفظ المهام', e); }
+  }
+  async function saveStreak(){
+    if (!storageAvailable) return;
+    var today = new Date().toISOString().slice(0,10);
+    try { localStorage.setItem('khatwa:streak', JSON.stringify({ date: today, count: streakCount })); }
+    catch(e){ console.error('تعذّر حفظ العداد', e); }
+  }
+  async function saveTheme(theme){
+    if (!storageAvailable) return;
+    try { localStorage.setItem('khatwa:theme', theme); }
+    catch(e){ console.error('تعذّر حفظ المظهر', e); }
+  }
+  async function loadState(){
+    if (!storageAvailable) return;
+    try {
+      var t = localStorage.getItem('khatwa:tasks');
+      if (t) tasks = JSON.parse(t);
+    } catch(e){ /* لا توجد مهام محفوظة بعد */ }
+    try {
+      var s = localStorage.getItem('khatwa:streak');
+      if (s){
+        var parsed = JSON.parse(s);
+        var today = new Date().toISOString().slice(0,10);
+        streakCount = (parsed.date === today) ? (parsed.count || 0) : 0;
+      }
+    } catch(e){ /* لا يوجد عداد محفوظ بعد */ }
+    try {
+      var th = localStorage.getItem('khatwa:theme');
+      if (th) root.setAttribute('data-theme', th);
+    } catch(e){ /* لا يوجد مظهر محفوظ بعد */ }
+  }
+  function updateFooterNote(){
+    var note = document.querySelector('footer.note');
+    if (!note) return;
+    note.textContent = storageAvailable
+      ? 'بياناتك تُحفظ تلقائيًا على هذا الجهاز — لن تضيع أفكارك حتى لو رجعت للصفحة بعد أيام.'
+      : 'تخزين الحفظ غير متاح على هذا المتصفح، فالمهام ستبقى لهذه الجلسة فقط.';
+  }
+
+  // ---------- panel switching ----------
+  var panels = ['idle','decision','timer','microstep'];
+  function showPanel(name){
+    panels.forEach(function(p){
+      var el = document.getElementById('panel-' + p);
+      if (p === name) el.removeAttribute('hidden'); else el.setAttribute('hidden','');
+    });
+    if (name === 'idle'){
+      document.getElementById('captureInput').value = '';
+      document.getElementById('captureInput').focus();
+    }
+  }
+
+  // ---------- capture ----------
+  var captureInput = document.getElementById('captureInput');
+  var captureBtn = document.getElementById('captureBtn');
+
+  function submitCapture(){
+    var val = captureInput.value.trim();
+    if (!val) { captureInput.focus(); return; }
+    pendingText = val;
+    document.getElementById('decisionTaskText').textContent = pendingText;
+    showPanel('decision');
+    document.getElementById('choiceYes').focus();
+  }
+  captureBtn.addEventListener('click', submitCapture);
+  captureInput.addEventListener('keydown', function(e){ if (e.key === 'Enter') submitCapture(); });
+
+  // ---------- decision ----------
+  document.getElementById('decisionCancel').addEventListener('click', function(){ pendingText=''; showPanel('idle'); });
+
+  document.getElementById('choiceYes').addEventListener('click', function(){
+    document.getElementById('timerTaskLabel').textContent = pendingText;
+    document.getElementById('timerMsg').textContent = '';
+    document.getElementById('timerActions').style.display = 'flex';
+    timerRemaining = TOTAL;
+    updateRing(); updateTimeText();
+    document.getElementById('timerRingWrap').classList.remove('urgent');
+    showPanel('timer');
+    startTimer();
+  });
+
+  document.getElementById('choiceNo').addEventListener('click', function(){
+    document.getElementById('microstepTaskLabel').textContent = pendingText;
+    document.getElementById('microstepInput').value = '';
+    showPanel('microstep');
+    document.getElementById('microstepInput').focus();
+  });
+
+  // ---------- timer ----------
+  function startTimer(){
+    clearInterval(timerInterval);
+    timerInterval = setInterval(function(){
+      timerRemaining--;
+      if (timerRemaining <= 20) document.getElementById('timerRingWrap').classList.add('urgent');
+      updateRing(); updateTimeText();
+      if (timerRemaining <= 0){
+        clearInterval(timerInterval);
+        completeQuickTask();
+      }
+    }, 1000);
+  }
+  function updateRing(){
+    var offset = CIRC * (1 - timerRemaining / TOTAL);
+    document.getElementById('ringProgress').style.strokeDashoffset = offset;
+  }
+  function updateTimeText(){
+    var m = Math.floor(timerRemaining/60), s = timerRemaining%60;
+    var text = (m<10?'0'+m:m) + ':' + (s<10?'0'+s:s);
+    document.getElementById('timerTime').textContent = toArabicNum(text);
+  }
+  function completeQuickTask(){
+    var id = genId();
+    tasks.unshift({ id:id, title: pendingText, steps:[{text:'أُنجزت خلال دقيقتين', done:true}], paused:true, quick:true });
+    newIds[id] = true;
+    bumpStreak();
+    saveTasks();
+    document.getElementById('timerMsg').textContent = '✓ خلصتها — خطوة أقل تسويف';
+    document.getElementById('timerActions').style.display = 'none';
+    renderTasks();
+    setTimeout(function(){ pendingText=''; showPanel('idle'); }, 1100);
+  }
+  document.getElementById('timerDone').addEventListener('click', function(){
+    clearInterval(timerInterval);
+    completeQuickTask();
+  });
+  document.getElementById('timerCancel').addEventListener('click', function(){
+    clearInterval(timerInterval);
+    pendingText = '';
+    showPanel('idle');
+  });
+
+  // ---------- microstep (start a chain) ----------
+  document.getElementById('microstepCancel').addEventListener('click', function(){ pendingText=''; showPanel('idle'); });
+
+  function submitMicrostep(){
+    var val = document.getElementById('microstepInput').value.trim();
+    if (!val) { document.getElementById('microstepInput').focus(); return; }
+    var id = genId();
+    tasks.unshift({ id:id, title: pendingText, steps:[{text: val, done:false}], paused:false, quick:false });
+    newIds[id] = true;
+    pendingText = '';
+    saveTasks();
+    renderTasks();
+    showPanel('idle');
+  }
+  document.getElementById('microstepSubmit').addEventListener('click', submitMicrostep);
+  document.getElementById('microstepInput').addEventListener('keydown', function(e){ if (e.key==='Enter') submitMicrostep(); });
+
+  // ---------- streak ----------
+  function bumpStreak(){
+    streakCount++;
+    document.getElementById('streakCount').textContent = toArabicNum(streakCount);
+    var streakEl = document.getElementById('streak');
+    streakEl.classList.remove('bump'); void streakEl.offsetWidth; streakEl.classList.add('bump');
+    saveStreak();
+  }
+
+  // ---------- task list rendering ----------
+  var taskListEl = document.getElementById('taskList');
+
+  function renderTasks(){
+    if (tasks.length === 0){
+      taskListEl.innerHTML = '<div class="empty-state">ما فيه خطوات بعد.<br>اكتب أول فكرة تراودك فوق، وخلّها تتحول لخطوة.</div>';
+      return;
+    }
+    taskListEl.innerHTML = '';
+    tasks.forEach(function(task){
+      taskListEl.appendChild(buildTaskCard(task));
+    });
+    newIds = {};
+    justDoneKey = null;
+  }
+
+  function buildTaskCard(task){
+    var card = document.createElement('article');
+    card.className = 'task-card' + (newIds[task.id] ? ' enter' : '');
+
+    var title = document.createElement('h3');
+    title.className = 'task-title' + (task.quick ? ' quick' : '');
+    if (task.quick){
+      title.innerHTML = '<span class="quick-badge">دقيقتين</span>';
+      title.appendChild(document.createTextNode(task.title));
+    } else {
+      title.textContent = task.title;
+    }
+    card.appendChild(title);
+
+    var trail = document.createElement('div');
+    trail.className = 'trail';
+    task.steps.forEach(function(step, idx){
+      trail.appendChild(buildTrailStep(task, step, idx));
+    });
+    card.appendChild(trail);
+
+    var lastStep = task.steps[task.steps.length - 1];
+
+    if (!task.quick && lastStep.done && !task.paused && task.awaitingFollowup){
+      var followup = document.createElement('div');
+      followup.className = 'task-followup';
+      var q = document.createElement('p'); q.textContent = 'تبي تكمل؟ وش الخطوة الجاية؟';
+      followup.appendChild(q);
+
+      var row = document.createElement('div'); row.className = 'input-row';
+      var inp = document.createElement('input');
+      inp.placeholder = 'الخطوة الجاية...'; inp.maxLength = 90;
+      var addBtn = document.createElement('button'); addBtn.className='btn btn-jade btn-sm'; addBtn.textContent='أضف للسلسلة';
+      row.appendChild(inp); row.appendChild(addBtn);
+      followup.appendChild(row);
+
+      var actions = document.createElement('div'); actions.className='followup-actions';
+      var doneToday = document.createElement('button'); doneToday.className='btn btn-ghost btn-sm'; doneToday.textContent='خلصت لليوم';
+      actions.appendChild(doneToday);
+      followup.appendChild(actions);
+
+      function addStep(){
+        var val = inp.value.trim();
+        if (!val) { inp.focus(); return; }
+        task.steps.push({ text: val, done:false });
+        task.awaitingFollowup = false;
+        saveTasks();
+        renderTasks();
+      }
+      addBtn.addEventListener('click', addStep);
+      inp.addEventListener('keydown', function(e){ if (e.key==='Enter') addStep(); });
+      doneToday.addEventListener('click', function(){
+        task.paused = true;
+        task.awaitingFollowup = false;
+        saveTasks();
+        renderTasks();
+      });
+
+      card.appendChild(followup);
+      setTimeout(function(){ inp.focus(); }, 30);
+    } else if (!task.quick && task.paused && lastStep.done){
+      var resume = document.createElement('div'); resume.className='resume-row';
+      var note = document.createElement('span'); note.className='resume-note'; note.textContent='متوقفة مؤقتًا — كمّل متى ما جهزت';
+      var resumeBtn = document.createElement('button'); resumeBtn.className='btn btn-outline btn-sm'; resumeBtn.textContent='متابعة السلسلة';
+      resumeBtn.addEventListener('click', function(){
+        task.paused = false;
+        task.awaitingFollowup = true;
+        saveTasks();
+        renderTasks();
+      });
+      resume.appendChild(note); resume.appendChild(resumeBtn);
+      card.appendChild(resume);
+    }
+
+    return card;
+  }
+
+  function buildTrailStep(task, step, idx){
+    var el = document.createElement('div');
+    el.className = 'trail-step ' + (step.done ? 'done' : 'active');
+
+    var dot = document.createElement('span');
+    dot.className = 'trail-dot';
+    var key = task.id + '-' + idx;
+    if (justDoneKey === key) dot.classList.add('just-done');
+    dot.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l5 5L20 6"/></svg>';
+
+    var isActiveEditable = !step.done && idx === task.steps.length - 1 && !task.quick;
+    if (isActiveEditable){
+      dot.setAttribute('role','button');
+      dot.setAttribute('tabindex','0');
+      dot.setAttribute('aria-label','علّم هذه الخطوة كمُنجزة');
+      var mark = function(){
+        step.done = true;
+        justDoneKey = key;
+        task.awaitingFollowup = true;
+        bumpStreak();
+        saveTasks();
+        renderTasks();
+      };
+      dot.addEventListener('click', mark);
+      dot.addEventListener('keydown', function(e){ if (e.key==='Enter' || e.key===' '){ e.preventDefault(); mark(); } });
+    }
+
+    var text = document.createElement('span');
+    text.className = 'trail-step-text';
+    text.textContent = step.text;
+
+    el.appendChild(dot);
+    el.appendChild(text);
+    return el;
+  }
+
+  // ---------- offline support ----------
+  if ('serviceWorker' in navigator){
+    window.addEventListener('load', function(){
+      navigator.serviceWorker.register('sw.js').catch(function(e){ console.error('تعذّر تفعيل العمل بدون إنترنت', e); });
+    });
+  }
+
+  // ---------- init ----------
+  init();
+
+  async function init(){
+    taskListEl.innerHTML = '<div class="empty-state">جارٍ التحميل...</div>';
+    await loadState();
+    document.getElementById('streakCount').textContent = toArabicNum(streakCount);
+    updateThemeIcon();
+    renderTasks();
+    showPanel('idle');
+    updateFooterNote();
+  }
+})();
+</script>
+</body>
+</html>
